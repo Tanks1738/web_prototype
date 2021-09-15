@@ -1,0 +1,178 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:web_prototype/helper/fryo_icons.dart';
+
+import 'home_page.dart';
+
+class Electronics extends StatefulWidget {
+  @override
+  _ElectronicsState createState() => _ElectronicsState();
+}
+
+class _ElectronicsState extends State<Electronics> {
+  String _userId;
+  User loginUser;
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: buildAppBar(),
+      // body: buildStreamElectronics(),
+      body: Center(
+        child: Column(
+          children: [
+            Icon(
+              FontAwesomeIcons.smile,
+              size: 135,
+            ),
+            Text(
+              "Coming Soon..",
+              style: TextStyle(fontSize: 25),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  StreamBuilder<QuerySnapshot> buildStreamElectronics() {
+    return StreamBuilder(
+        stream: FirebaseFirestore.instance
+            .collection("products")
+            .where("producttype", isEqualTo: "electronics")
+            .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.data == null)
+            return Text(
+              'No Data',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            );
+          return GridView.builder(
+            // scrollDirection: Axis.horizontal,
+            itemCount: snapshot.data.docs.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              childAspectRatio: MediaQuery.of(context).size.width /
+                  (MediaQuery.of(context).size.height / 1.4),
+              mainAxisSpacing: 10.0,
+              crossAxisSpacing: 10.0,
+            ),
+            itemBuilder: (context, index) {
+              DocumentSnapshot products = snapshot.data.docs[index];
+              final user = FirebaseAuth.instance.currentUser;
+              if (user != null) {
+                _userId = user.uid;
+              }
+              return Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    padding: EdgeInsets.all(20.0),
+                    height: 180,
+                    width: 160,
+                    decoration: BoxDecoration(
+                        color: Color(0xFF3D82AE),
+                        borderRadius: BorderRadius.circular(16)),
+                    child: Image.network(products['img']),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 20.0 / 4),
+                    child: Text(
+                      "No data" + products['name'],
+                      style: TextStyle(
+                        color: Color(0xFF535353),
+                      ),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 30.0),
+                    child: Row(
+                      children: [
+                        Text(
+                          "\R " + products['price'],
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        SizedBox(
+                          width: 60,
+                        ),
+                        GestureDetector(
+                          child: Icon(
+                            // CupertinoIcons.cart_fill_badge_plus,
+                            Icons.shopping_cart,
+                            color: Colors.black,
+                            size: 30,
+                          ),
+                          onTap: () {
+                            DocumentReference documentReference =
+                                FirebaseFirestore.instance
+                                    .collection('userData')
+                                    .doc(_userId)
+                                    .collection('cartData')
+                                    .doc();
+                            documentReference
+                                .set({
+                                  'uid': _userId,
+                                  'barcode': products['barcode'],
+                                  'img': products['img'],
+                                  'name': products['name'],
+                                  'netweight': products['netweight'],
+                                  'price': products['price'],
+                                  'points': products['points'],
+                                  'producttype': products['producttype'],
+                                  'id': documentReference.id
+                                })
+                                .then((result) {})
+                                .catchError((e) {
+                                  print(e);
+                                });
+                            Scaffold.of(context).showSnackBar(new SnackBar(
+                              content: new Text(
+                                'Added to Cart',
+                                style: TextStyle(
+                                    color: Colors.white, fontSize: 18),
+                                textAlign: TextAlign.start,
+                              ),
+                              duration: Duration(milliseconds: 300),
+                              backgroundColor: Color(0xFF3D82AE),
+                            ));
+                          },
+                        ),
+                      ],
+                    ),
+                  )
+                ],
+              );
+            },
+            // separatorBuilder: (BuildContext context, int index) {
+            //   return SizedBox(width: 10);
+            // }
+          );
+        });
+  }
+
+  AppBar buildAppBar() {
+    return AppBar(
+      centerTitle: true,
+      elevation: 0,
+      backgroundColor: Colors.white,
+      iconTheme: IconThemeData(color: Colors.black),
+      title: Text(
+        "Guide",
+        style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            FontAwesomeIcons.book,
+            color: Colors.black,
+          ),
+          onPressed: () {
+            Navigator.of(context).pushNamed('/cartpage');
+          },
+        )
+      ],
+    );
+  }
+}
